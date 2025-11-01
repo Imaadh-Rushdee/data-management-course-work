@@ -25,6 +25,7 @@ CREATE TABLE savings (
   target_amount NUMBER(10,2),
   current_amount NUMBER(10,2),
   target_date DATE,
+  last_entered_date DATE,
   status VARCHAR2(20)
 );
 
@@ -98,6 +99,119 @@ END;
 /
 
 
+--procedure to add budget--
+CREATE OR REPLACE PROCEDURE add_budget(category IN VARCHAR2, amount NUMBER, start_date DATE, end_date DATE)
+AS
+ failedToInsertException EXCEPTION;
+ rowCount NUMBER;
+BEGIN
+    INSERT INTO budgets(category, amount, start_date, end_date, status) VALUES(category, amount, start_date, end_date, 'PENDING');
+    COMMIT;
+    rowCount := SQL%ROWCOUNT;
+    IF rowCount > 0 THEN
+        RAISE failedToInsertException;
+    END IF;
+    DBMS_OUTPUT.PUT_LINE('Record Inserted in Budgets Successfully');
+EXCEPTION
+WHEN failedToInsertException THEN
+    DBMS_OUTPUT.PUT_LINE('Failed to Insert Record in Budget Check data given...!');
+END;
+/
+
+--procedure to update budget--
+CREATE OR REPLACE PROCEDURE update_budget(budgetId IN NUMBER, paraCategory IN VARCHAR2, paraAmount NUMBER, paraStartDate DATE, paraEndDate DATE)
+AS
+ failedToUpdateException EXCEPTION;
+ rowCount NUMBER;
+BEGIN
+    UPDATE budgets SET category = paraCategory, amount = paraAmount, start_date = paraStartDate, end_date = paraEndDate, status = 'PENDING' WHERE budget_id = budgetId;
+    COMMIT;
+    rowCount := SQL%ROWCOUNT;
+    IF rowCount > 0 THEN
+        RAISE failedToUpdateException;
+    END IF;
+    DBMS_OUTPUT.PUT_LINE('Record Update in Budget Successfully');
+EXCEPTION
+WHEN failedToUpdateException THEN
+    DBMS_OUTPUT.PUT_LINE('Failed to Update Record in Budgets Check data given...!');
+END;
+/
+
+--procedure to delete budget--
+CREATE OR REPLACE PROCEDURE delete_budget(budgetId IN NUMBER)
+AS
+ failedToDeleteException EXCEPTION;
+ rowCount NUMBER;
+BEGIN
+    DELETE FROM budgets WHERE budget_id = budgetId;
+    COMMIT;
+    rowCount := SQL%ROWCOUNT;
+    IF rowCount > 0 THEN
+        RAISE failedToDeleteException;
+    END IF;
+    DBMS_OUTPUT.PUT_LINE('Record Delete from budget Successfully');
+EXCEPTION
+WHEN failedToDeleteException THEN
+    DBMS_OUTPUT.PUT_LINE('Failed to Delete Record in budget Check data given...!');
+END;
+/
+
+--procedure to add savings--
+CREATE OR REPLACE PROCEDURE add_savings(goal_name IN VARCHAR2, target_amount NUMBER, current_amount NUMBER, target_date DATE, last_entered_date DATE)
+AS
+ failedToInsertException EXCEPTION;
+ rowCount NUMBER;
+BEGIN
+    INSERT INTO savings(goal_name, target_amount, current_amount,target_date, last_entered_date, status) VALUES(goal_name, target_amount, current_amount, target_date, last_entered_date, 'PENDING');
+    COMMIT;
+    rowCount := SQL%ROWCOUNT;
+    IF rowCount > 0 THEN
+        RAISE failedToInsertException;
+    END IF;
+    DBMS_OUTPUT.PUT_LINE('Record Inserted in savings Successfully');
+EXCEPTION
+WHEN failedToInsertException THEN
+    DBMS_OUTPUT.PUT_LINE('Failed to Insert Record in savings Check data given...!');
+END;
+/
+
+--procedure to update savings--
+CREATE OR REPLACE PROCEDURE update_savings(savingsId IN NUMBER, para_goal_name IN VARCHAR2, para_target_amount NUMBER, para_current_amount NUMBER, para_target_date DATE, para_last_entered_date DATE)
+AS
+ failedToUpdateException EXCEPTION;
+ rowCount NUMBER;
+BEGIN
+    UPDATE savings SET goal_name = para_goal_name, target_amount = para_target_amount, current_amount = para_target_amount, last_entered_date = para_last_entered_date, status = 'PENDING' WHERE saving_id = savingsId;
+    COMMIT;
+    rowCount := SQL%ROWCOUNT;
+    IF rowCount > 0 THEN
+        RAISE failedToUpdateException;
+    END IF;
+    DBMS_OUTPUT.PUT_LINE('Record Update in savings Successfully');
+EXCEPTION
+WHEN failedToUpdateException THEN
+    DBMS_OUTPUT.PUT_LINE('Failed to Update Record in savings Check data given...!');
+END;
+/
+
+--procedure to delete savings--
+CREATE OR REPLACE PROCEDURE delete_savings(savingsId IN NUMBER)
+AS
+ failedToDeleteException EXCEPTION;
+ rowCount NUMBER;
+BEGIN
+    DELETE FROM savings WHERE saving_id = savingsId;
+    COMMIT;
+    rowCount := SQL%ROWCOUNT;
+    IF rowCount > 0 THEN
+        RAISE failedToDeleteException;
+    END IF;
+    DBMS_OUTPUT.PUT_LINE('Record Delete from savings Successfully');
+EXCEPTION
+WHEN failedToDeleteException THEN
+    DBMS_OUTPUT.PUT_LINE('Failed to Delete Record from savings Check data given...!');
+END;
+/
 
 
 
