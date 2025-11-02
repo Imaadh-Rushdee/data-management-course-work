@@ -213,8 +213,63 @@ WHEN failedToDeleteException THEN
 END;
 /
 
+--------------------------------------------------------
+--procedure to sync data from sqlite to oracle--
+CREATE OR REPLACE PROCEDURE sync_expenses(category IN VARCHAR2, amount NUMBER, expense_date DATE, note VARCHAR2)
+AS
+ failedToInsertException EXCEPTION;
+ rowCount NUMBER;
+BEGIN
+    INSERT INTO expenses(category, amount, expense_date, note, sync_status) VALUES(category, amount, expense_date, note, 'SYNCED');
+    COMMIT;
+    rowCount := SQL%ROWCOUNT;
+    IF rowCount > 0 THEN
+        RAISE failedToInsertException;
+    END IF;
+    DBMS_OUTPUT.PUT_LINE('Record Inserted Successfully');
+EXCEPTION
+WHEN failedToInsertException THEN
+    DBMS_OUTPUT.PUT_LINE('Failed to Insert Record Check data given...!');
+END;
+/
+
+CREATE OR REPLACE PROCEDURE sync_budgets(category IN VARCHAR2, amount NUMBER, start_date DATE, end_date DATE)
+AS
+ failedToInsertException EXCEPTION;
+ rowCount NUMBER;
+BEGIN
+    INSERT INTO budgets(category, amount, start_date, end_date, status) VALUES(category, amount, start_date, end_date, 'SYNCED');
+    COMMIT;
+    rowCount := SQL%ROWCOUNT;
+    IF rowCount > 0 THEN
+        RAISE failedToInsertException;
+    END IF;
+    DBMS_OUTPUT.PUT_LINE('Record Inserted Successfully');
+EXCEPTION
+WHEN failedToInsertException THEN
+    DBMS_OUTPUT.PUT_LINE('Failed to Insert Record Check data given...!');
+END;
+/
 
 
+CREATE OR REPLACE PROCEDURE sync_savings(goal_name IN VARCHAR2, target_amount NUMBER, current_amount NUMBER, target_date DATE, last_entered_date DATE)
+AS
+ failedToInsertException EXCEPTION;
+ rowCount NUMBER;
+BEGIN
+    INSERT INTO savings(goal_name, target_amount, current_amount,target_date, last_entered_date, status) VALUES(goal_name, target_amount, current_amount, target_date, last_entered_date, 'SYNCED');
+    COMMIT;
+    rowCount := SQL%ROWCOUNT;
+    IF rowCount > 0 THEN
+        RAISE failedToInsertException;
+    END IF;
+    DBMS_OUTPUT.PUT_LINE('Record Inserted in savings Successfully');
+EXCEPTION
+WHEN failedToInsertException THEN
+    DBMS_OUTPUT.PUT_LINE('Failed to Insert Record in savings Check data given...!');
+END;
+/
 
-
+----------------------------------------------------------------------------------------
+--functions for calculations--
 
