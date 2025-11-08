@@ -470,6 +470,47 @@ EXCEPTION
 END;
 /
 
--- sync on log in is typically handled by application logic, not a database trigger.
--- However, we can create a procedure that an application would call to set all 'PENDING' records to a 'SYNCED_ON_LOGIN' status if required.
--- Since the prompt asks for a trigger, and a login trigger is complex/impractical in pure SQL, I'll skip it unless you clarify the exact DB event.
+--views--
+-- expense summary view (Total spent per category across all time)
+CREATE OR REPLACE VIEW expense_summary_view AS
+SELECT
+    category,
+    COUNT(expense_id) AS total_transactions,
+    SUM(amount) AS total_spent
+FROM
+    expenses
+GROUP BY
+    category
+ORDER BY
+    total_spent DESC;
+
+-- monthly expense view (Total spent per month)
+CREATE OR REPLACE VIEW monthly_expense_view AS
+SELECT
+    TO_CHAR(expense_date, 'YYYY-MM') AS expense_month,
+    EXTRACT(YEAR FROM expense_date) AS expense_year,
+    EXTRACT(MONTH FROM expense_date) AS expense_month_num,
+    SUM(amount) AS total_spent
+FROM
+    expenses
+GROUP BY
+    TO_CHAR(expense_date, 'YYYY-MM'),
+    EXTRACT(YEAR FROM expense_date),
+    EXTRACT(MONTH FROM expense_date)
+ORDER BY
+    expense_year DESC, expense_month_num DESC;
+
+-- savings progress view (Goal details including progress percentage)
+CREATE OR REPLACE VIEW savings_progress_view AS
+SELECT
+    saving_id,
+    goal_name,
+    target_amount,
+    current_amount,
+    target_date,
+    status,
+    (current_amount / target_amount) * 100 AS progress_percent
+FROM
+    savings
+WHERE
+    target_amount > 0;
