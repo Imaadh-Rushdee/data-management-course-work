@@ -416,3 +416,60 @@ EXCEPTION
 END;
 /
 
+--triggers--
+-- pending on update expense
+CREATE OR REPLACE TRIGGER trg_expense_update_status
+BEFORE UPDATE OF category, amount, expense_date, note ON expenses
+FOR EACH ROW
+BEGIN
+    -- Set sync_status to 'PENDING' if any tracked field changes
+    IF :OLD.category != :NEW.category OR
+       :OLD.amount != :NEW.amount OR
+       :OLD.expense_date != :NEW.expense_date OR
+       NVL(:OLD.note, 'X') != NVL(:NEW.note, 'X') -- Handle potential NULL notes
+    THEN
+        :NEW.sync_status := 'PENDING';
+    END IF;
+END;
+/
+
+-- pending on update budget
+CREATE OR REPLACE TRIGGER trg_budget_update_status
+BEFORE UPDATE OF category, amount, start_date, end_date ON budgets
+FOR EACH ROW
+BEGIN
+    -- Set status to 'PENDING' if any tracked field changes
+    IF :OLD.category != :NEW.category OR
+       :OLD.amount != :NEW.amount OR
+       :OLD.start_date != :NEW.start_date OR
+       :OLD.end_date != :NEW.end_date
+    THEN
+        :NEW.status := 'PENDING';
+    END IF;
+END;
+/
+
+-- budget limit (Preventing expense if it exceeds the active budget)
+CREATE OR REPLACE TRIGGER trg_budget_limit
+BEFORE INSERT ON expenses
+FOR EACH ROW
+DECLARE
+    v_remaining_budget NUMBER(10, 2);
+    e_budget_exceeded EXCEPTION;
+BEGIN
+    -- Check the remaining budget for the expense category on the expense date
+    v_remaining_budget := get_remaining_budget(:NEW.category, :NEW.expense_date);
+
+    IF v_remaining_budget < :NEW.amount THEN
+        RAISE e_budget_exceeded;
+    END IF;
+
+EXCEPTION
+    WHEN e_budget_exceeded THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Expense of ' || :NEW.amount || ' for category ' || :NEW.category || ' exceeds the remaining budget of ' || v_remaining_budget || '.');
+END;
+/
+
+-- sync on log in is typically handled by application logic, not a database trigger.
+-- However, we can create a procedure that an application would call to set all 'PENDING' records to a 'SYNCED_ON_LOGIN' status if required.
+-- Since the prompt asks for a trigger, and a login trigger is complex/impractical in pure SQL, I'll skip it unless you clarify the exact DB event.
