@@ -299,3 +299,120 @@ END;
 --category expenses 
 --budgets vs expenses --
 --updates--
+--fuctions for calculate--
+  
+-- calculate total expense for a given month and year
+CREATE OR REPLACE FUNCTION get_monthly_total_expense(
+    p_month IN NUMBER,
+    p_year IN NUMBER
+)
+RETURN NUMBER
+IS
+    v_total_expense NUMBER(10, 2);
+BEGIN
+    SELECT NVL(SUM(amount), 0)
+    INTO v_total_expense
+    FROM expenses
+    WHERE EXTRACT(MONTH FROM expense_date) = p_month
+    AND EXTRACT(YEAR FROM expense_date) = p_year;
+
+    RETURN v_total_expense;
+END;
+/
+
+-- calculate total expense for a given category
+CREATE OR REPLACE FUNCTION get_category_total_expense(
+    p_category IN VARCHAR2
+)
+RETURN NUMBER
+IS
+    v_total_expense NUMBER(10, 2);
+BEGIN
+    SELECT NVL(SUM(amount), 0)
+    INTO v_total_expense
+    FROM expenses
+    WHERE category = p_category;
+
+    RETURN v_total_expense;
+END;
+/
+
+-- calculate total savings (sum of current_amount across all goals)
+CREATE OR REPLACE FUNCTION get_total_current_savings
+RETURN NUMBER
+IS
+    v_total_savings NUMBER(10, 2);
+BEGIN
+    SELECT NVL(SUM(current_amount), 0)
+    INTO v_total_savings
+    FROM savings;
+
+    RETURN v_total_savings;
+END;
+/
+
+-- calculate remaining total budget for a category
+CREATE OR REPLACE FUNCTION get_remaining_budget(
+    p_category IN VARCHAR2,
+    p_date IN DATE DEFAULT SYSDATE
+)
+RETURN NUMBER
+IS
+    v_budget_amount NUMBER(10, 2);
+    v_spent_amount NUMBER(10, 2);
+BEGIN
+    -- Get the active budget amount for the category covering the given date
+    SELECT NVL(MAX(amount), 0)
+    INTO v_budget_amount
+    FROM budgets
+    WHERE category = p_category
+    AND p_date BETWEEN start_date AND end_date
+    AND status = 'ACTIVE'; -- Assuming 'ACTIVE' is the status for current budgets
+
+    -- Get total expenses for that category within the budget period
+    -- This assumes expenses are within the current active budget period
+    SELECT NVL(SUM(e.amount), 0)
+    INTO v_spent_amount
+    FROM expenses e
+    JOIN budgets b ON e.category = b.category
+    WHERE b.category = p_category
+    AND e.expense_date BETWEEN b.start_date AND b.end_date
+    AND b.start_date = ( -- Find the start date of the current ACTIVE budget for context
+        SELECT MAX(start_date)
+        FROM budgets
+        WHERE category = p_category
+        AND p_date BETWEEN start_date AND end_date
+    );
+
+    RETURN v_budget_amount - v_spent_amount;
+END;
+/
+
+-- get saving progress for a category (as a percentage)
+CREATE OR REPLACE FUNCTION get_saving_progress_percent(
+    p_saving_id IN NUMBER
+)
+RETURN NUMBER
+IS
+    v_target_amount NUMBER(10, 2);
+    v_current_amount NUMBER(10, 2);
+    v_progress_percent NUMBER(5, 2);
+BEGIN
+    SELECT target_amount, current_amount
+    INTO v_target_amount, v_current_amount
+    FROM savings
+    WHERE saving_id = p_saving_id;
+
+    IF v_target_amount > 0 THEN
+        v_progress_percent := (v_current_amount / v_target_amount) * 100;
+        RETURN v_progress_percent;
+    ELSE
+        -- Return 0 or handle error if target amount is zero
+        RETURN 0;
+    END IF;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN NULL; -- Or raise an application error
+END;
+/
+
