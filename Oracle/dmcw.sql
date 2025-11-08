@@ -514,3 +514,52 @@ FROM
     savings
 WHERE
     target_amount > 0;
+
+--other materialize views for performance--
+-- monthly expenses Materialized View (Refresh daily for faster reporting)
+CREATE MATERIALIZED VIEW mv_monthly_expenses
+BUILD IMMEDIATE
+REFRESH COMPLETE ON DEMAND -- or ON COMMIT/FAST if logs are set up
+AS
+SELECT
+    TRUNC(expense_date, 'MM') AS expense_month_start,
+    SUM(amount) AS monthly_total_spent
+FROM
+    expenses
+GROUP BY
+    TRUNC(expense_date, 'MM');
+
+-- category expenses Materialized View (Total spent per category, for dashboards)
+CREATE MATERIALIZED VIEW mv_category_expenses
+BUILD IMMEDIATE
+REFRESH COMPLETE ON DEMAND
+AS
+SELECT
+    category,
+    SUM(amount) AS category_total_spent
+FROM
+    expenses
+GROUP BY
+    category;
+
+-- budgets vs expenses Materialized View (Comparison of budget and actual spend)
+CREATE MATERIALIZED VIEW mv_budgets_vs_expenses
+BUILD IMMEDIATE
+REFRESH COMPLETE ON DEMAND
+AS
+SELECT
+    b.budget_id,
+    b.category,
+    b.start_date,
+    b.end_date,
+    b.amount AS budget_amount,
+    NVL(SUM(e.amount), 0) AS actual_spent,
+    b.amount - NVL(SUM(e.amount), 0) AS remaining_budget
+FROM
+    budgets b
+LEFT JOIN
+    expenses e
+    ON b.category = e.category
+    AND e.expense_date BETWEEN b.start_date AND b.end_date
+GROUP BY
+    b.budget_id, b.category, b.start_date, b.end_date, b.amount;
