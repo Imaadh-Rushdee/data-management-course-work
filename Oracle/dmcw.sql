@@ -182,7 +182,7 @@ AS
  failedToUpdateException EXCEPTION;
  rowCount NUMBER;
 BEGIN
-    UPDATE savings SET goal_name = para_goal_name, target_amount = para_target_amount, current_amount = para_target_amount, last_entered_date = para_last_entered_date, status = 'PENDING' WHERE saving_id = savingsId;
+    UPDATE savings SET goal_name = para_goal_name, target_amount = para_target_amount, current_amount = para_current_amount, target_date last_entered_date = para_last_entered_date, status = 'PENDING' WHERE saving_id = savingsId;
     COMMIT;
     rowCount := SQL%ROWCOUNT;
     IF rowCount = 0 THEN
@@ -298,7 +298,275 @@ END;
 --monthly expenses--
 --category expenses 
 --budgets vs expenses --
+<<<<<<< HEAD
 
 --select cursor procedures--
 
 --
+=======
+--updates--
+--fuctions for calculate--
+  
+-- calculate total expense for a given month and year
+CREATE OR REPLACE FUNCTION get_monthly_total_expense(
+    p_month IN NUMBER,
+    p_year IN NUMBER
+)
+RETURN NUMBER
+IS
+    v_total_expense NUMBER(10, 2);
+BEGIN
+    SELECT NVL(SUM(amount), 0)
+    INTO v_total_expense
+    FROM expenses
+    WHERE EXTRACT(MONTH FROM expense_date) = p_month
+    AND EXTRACT(YEAR FROM expense_date) = p_year;
+
+    RETURN v_total_expense;
+END;
+/
+
+-- calculate total expense for a given category
+CREATE OR REPLACE FUNCTION get_category_total_expense(
+    p_category IN VARCHAR2
+)
+RETURN NUMBER
+IS
+    v_total_expense NUMBER(10, 2);
+BEGIN
+    SELECT NVL(SUM(amount), 0)
+    INTO v_total_expense
+    FROM expenses
+    WHERE category = p_category;
+
+    RETURN v_total_expense;
+END;
+/
+
+-- calculate total savings (sum of current_amount across all goals)
+CREATE OR REPLACE FUNCTION get_total_current_savings
+RETURN NUMBER
+IS
+    v_total_savings NUMBER(10, 2);
+BEGIN
+    SELECT NVL(SUM(current_amount), 0)
+    INTO v_total_savings
+    FROM savings;
+
+    RETURN v_total_savings;
+END;
+/
+
+-- calculate remaining total budget for a category
+CREATE OR REPLACE FUNCTION get_remaining_budget(
+    p_category IN VARCHAR2,
+    p_date IN DATE DEFAULT SYSDATE
+)
+RETURN NUMBER
+IS
+    v_budget_amount NUMBER(10, 2);
+    v_spent_amount NUMBER(10, 2);
+BEGIN
+    -- Get the active budget amount for the category covering the given date
+    SELECT NVL(MAX(amount), 0)
+    INTO v_budget_amount
+    FROM budgets
+    WHERE category = p_category
+    AND p_date BETWEEN start_date AND end_date
+    AND status = 'ACTIVE'; -- Assuming 'ACTIVE' is the status for current budgets
+
+    -- Get total expenses for that category within the budget period
+    -- This assumes expenses are within the current active budget period
+    SELECT NVL(SUM(e.amount), 0)
+    INTO v_spent_amount
+    FROM expenses e
+    JOIN budgets b ON e.category = b.category
+    WHERE b.category = p_category
+    AND e.expense_date BETWEEN b.start_date AND b.end_date
+    AND b.start_date = ( -- Find the start date of the current ACTIVE budget for context
+        SELECT MAX(start_date)
+        FROM budgets
+        WHERE category = p_category
+        AND p_date BETWEEN start_date AND end_date
+    );
+
+    RETURN v_budget_amount - v_spent_amount;
+END;
+/
+
+-- get saving progress for a category (as a percentage)
+CREATE OR REPLACE FUNCTION get_saving_progress_percent(
+    p_saving_id IN NUMBER
+)
+RETURN NUMBER
+IS
+    v_target_amount NUMBER(10, 2);
+    v_current_amount NUMBER(10, 2);
+    v_progress_percent NUMBER(5, 2);
+BEGIN
+    SELECT target_amount, current_amount
+    INTO v_target_amount, v_current_amount
+    FROM savings
+    WHERE saving_id = p_saving_id;
+
+    IF v_target_amount > 0 THEN
+        v_progress_percent := (v_current_amount / v_target_amount) * 100;
+        RETURN v_progress_percent;
+    ELSE
+        -- Return 0 or handle error if target amount is zero
+        RETURN 0;
+    END IF;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN NULL; -- Or raise an application error
+END;
+/
+
+--triggers--
+-- pending on update expense
+CREATE OR REPLACE TRIGGER trg_expense_update_status
+BEFORE UPDATE OF category, amount, expense_date, note ON expenses
+FOR EACH ROW
+BEGIN
+    -- Set sync_status to 'PENDING' if any tracked field changes
+    IF :OLD.category != :NEW.category OR
+       :OLD.amount != :NEW.amount OR
+       :OLD.expense_date != :NEW.expense_date OR
+       NVL(:OLD.note, 'X') != NVL(:NEW.note, 'X') -- Handle potential NULL notes
+    THEN
+        :NEW.sync_status := 'PENDING';
+    END IF;
+END;
+/
+
+-- pending on update budget
+CREATE OR REPLACE TRIGGER trg_budget_update_status
+BEFORE UPDATE OF category, amount, start_date, end_date ON budgets
+FOR EACH ROW
+BEGIN
+    -- Set status to 'PENDING' if any tracked field changes
+    IF :OLD.category != :NEW.category OR
+       :OLD.amount != :NEW.amount OR
+       :OLD.start_date != :NEW.start_date OR
+       :OLD.end_date != :NEW.end_date
+    THEN
+        :NEW.status := 'PENDING';
+    END IF;
+END;
+/
+
+-- budget limit (Preventing expense if it exceeds the active budget)
+CREATE OR REPLACE TRIGGER trg_budget_limit
+BEFORE INSERT ON expenses
+FOR EACH ROW
+DECLARE
+    v_remaining_budget NUMBER(10, 2);
+    e_budget_exceeded EXCEPTION;
+BEGIN
+    -- Check the remaining budget for the expense category on the expense date
+    v_remaining_budget := get_remaining_budget(:NEW.category, :NEW.expense_date);
+
+    IF v_remaining_budget < :NEW.amount THEN
+        RAISE e_budget_exceeded;
+    END IF;
+
+EXCEPTION
+    WHEN e_budget_exceeded THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Expense of ' || :NEW.amount || ' for category ' || :NEW.category || ' exceeds the remaining budget of ' || v_remaining_budget || '.');
+END;
+/
+
+--views--
+-- expense summary view (Total spent per category across all time)
+CREATE OR REPLACE VIEW expense_summary_view AS
+SELECT
+    category,
+    COUNT(expense_id) AS total_transactions,
+    SUM(amount) AS total_spent
+FROM
+    expenses
+GROUP BY
+    category
+ORDER BY
+    total_spent DESC;
+
+-- monthly expense view (Total spent per month)
+CREATE OR REPLACE VIEW monthly_expense_view AS
+SELECT
+    TO_CHAR(expense_date, 'YYYY-MM') AS expense_month,
+    EXTRACT(YEAR FROM expense_date) AS expense_year,
+    EXTRACT(MONTH FROM expense_date) AS expense_month_num,
+    SUM(amount) AS total_spent
+FROM
+    expenses
+GROUP BY
+    TO_CHAR(expense_date, 'YYYY-MM'),
+    EXTRACT(YEAR FROM expense_date),
+    EXTRACT(MONTH FROM expense_date)
+ORDER BY
+    expense_year DESC, expense_month_num DESC;
+
+-- savings progress view (Goal details including progress percentage)
+CREATE OR REPLACE VIEW savings_progress_view AS
+SELECT
+    saving_id,
+    goal_name,
+    target_amount,
+    current_amount,
+    target_date,
+    status,
+    (current_amount / target_amount) * 100 AS progress_percent
+FROM
+    savings
+WHERE
+    target_amount > 0;
+
+--other materialize views for performance--
+-- monthly expenses Materialized View (Refresh daily for faster reporting)
+CREATE MATERIALIZED VIEW mv_monthly_expenses
+BUILD IMMEDIATE
+REFRESH COMPLETE ON DEMAND -- or ON COMMIT/FAST if logs are set up
+AS
+SELECT
+    TRUNC(expense_date, 'MM') AS expense_month_start,
+    SUM(amount) AS monthly_total_spent
+FROM
+    expenses
+GROUP BY
+    TRUNC(expense_date, 'MM');
+
+-- category expenses Materialized View (Total spent per category, for dashboards)
+CREATE MATERIALIZED VIEW mv_category_expenses
+BUILD IMMEDIATE
+REFRESH COMPLETE ON DEMAND
+AS
+SELECT
+    category,
+    SUM(amount) AS category_total_spent
+FROM
+    expenses
+GROUP BY
+    category;
+
+-- budgets vs expenses Materialized View (Comparison of budget and actual spend)
+CREATE MATERIALIZED VIEW mv_budgets_vs_expenses
+BUILD IMMEDIATE
+REFRESH COMPLETE ON DEMAND
+AS
+SELECT
+    b.budget_id,
+    b.category,
+    b.start_date,
+    b.end_date,
+    b.amount AS budget_amount,
+    NVL(SUM(e.amount), 0) AS actual_spent,
+    b.amount - NVL(SUM(e.amount), 0) AS remaining_budget
+FROM
+    budgets b
+LEFT JOIN
+    expenses e
+    ON b.category = e.category
+    AND e.expense_date BETWEEN b.start_date AND b.end_date
+GROUP BY
+    b.budget_id, b.category, b.start_date, b.end_date, b.amount;
+>>>>>>> 7002a160b753f7a14306f6445c8e00ebfdd91815
