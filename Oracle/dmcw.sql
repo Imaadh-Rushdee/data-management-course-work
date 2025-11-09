@@ -422,6 +422,7 @@ END;
 
 ----------------------------------------------------------------------------------------
 --functions for calculations--
+-- get pending expenses and mark them as SYNCED
 CREATE OR REPLACE PROCEDURE get_pending_expenses(p_cursor OUT SYS_REFCURSOR)
 AS
 BEGIN
@@ -432,10 +433,20 @@ BEGIN
            expense_date,
            note
     FROM expenses
-    WHERE sync_status = 'PENDING';
+    WHERE sync_status = 'PENDING'
+    FOR UPDATE;
+    
+    FOR rec IN (SELECT expense_id FROM expenses WHERE sync_status = 'PENDING') LOOP
+        UPDATE expenses
+        SET sync_status = 'SYNCED'
+        WHERE expense_id = rec.expense_id;
+    END LOOP;
+
+    COMMIT;
 END;
 /
 
+-- get pending budgets and mark them as SYNCED
 CREATE OR REPLACE PROCEDURE get_pending_budgets(p_cursor OUT SYS_REFCURSOR)
 AS
 BEGIN
@@ -446,10 +457,20 @@ BEGIN
            start_date,
            end_date
     FROM budgets
-    WHERE status = 'PENDING';
+    WHERE status = 'PENDING'
+    FOR UPDATE;
+
+    FOR rec IN (SELECT budget_id FROM budgets WHERE status = 'PENDING') LOOP
+        UPDATE budgets
+        SET status = 'SYNCED'
+        WHERE budget_id = rec.budget_id;
+    END LOOP;
+
+    COMMIT;
 END;
 /
 
+-- get pending savings and mark them as SYNCED
 CREATE OR REPLACE PROCEDURE get_pending_savings(p_cursor OUT SYS_REFCURSOR)
 AS
 BEGIN
@@ -461,40 +482,20 @@ BEGIN
            target_date,
            last_entered_date
     FROM savings
-    WHERE status = 'PENDING';
+    WHERE status = 'PENDING'
+    FOR UPDATE;
+
+    FOR rec IN (SELECT saving_id FROM savings WHERE status = 'PENDING') LOOP
+        UPDATE savings
+        SET status = 'SYNCED'
+        WHERE saving_id = rec.saving_id;
+    END LOOP;
+
+    COMMIT;
 END;
 /
 
 
---calculate total expense for a given month--
---calculate total expense for a given category--
---calculate total savings--
---calculate remaining total budget for a category--
---get saving progress for a category-- 
-
---triggers for the program--
-
---sync on log in--
---pending on update expense--
---pending on update budget--
---budget limit--
-
---views for the program--
-
---expense summary view--
---monthly expense view--
---savings progress view--
-
---materialized views--
-
---monthly expenses--
---category expenses 
---budgets vs expenses --
-
---select cursor procedures--
-
---updates--
---fuctions for calculate--
   
 -- calculate total expense for a given month and year
 CREATE OR REPLACE FUNCTION get_monthly_total_expense(
@@ -763,4 +764,185 @@ GROUP BY
 
 
 
---sync for sqlite cursors--
+--select cursors--
+
+CREATE OR REPLACE PROCEDURE get_all_expenses(p_cursor OUT SYS_REFCURSOR)
+AS
+BEGIN
+    OPEN p_cursor FOR
+    SELECT expense_id,
+           category,
+           amount,
+           expense_date,
+           note,
+           sync_status
+    FROM expenses
+    ORDER BY expense_date DESC;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_all_budgets(p_cursor OUT SYS_REFCURSOR)
+AS
+BEGIN
+    OPEN p_cursor FOR
+    SELECT budget_id,
+           category,
+           amount,
+           start_date,
+           end_date,
+           status
+    FROM budgets
+    ORDER BY start_date DESC;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_all_savings(p_cursor OUT SYS_REFCURSOR)
+AS
+BEGIN
+    OPEN p_cursor FOR
+    SELECT saving_id,
+           goal_name,
+           target_amount,
+           current_amount,
+           target_date,
+           last_entered_date,
+           status
+    FROM savings
+    ORDER BY target_date DESC;
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE get_expenses_for_month(
+    p_month IN NUMBER,
+    p_year IN NUMBER,
+    p_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_cursor FOR
+    SELECT expense_id,
+           category,
+           amount,
+           expense_date,
+           note
+    FROM expenses
+    WHERE EXTRACT(MONTH FROM expense_date) = p_month
+      AND EXTRACT(YEAR FROM expense_date) = p_year
+    ORDER BY expense_date DESC;
+END;
+/
+CREATE OR REPLACE PROCEDURE get_savings_for_category(
+    p_goal_name IN VARCHAR2,
+    p_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_cursor FOR
+    SELECT saving_id,
+           goal_name,
+           target_amount,
+           current_amount,
+           target_date,
+           last_entered_date,
+           status
+    FROM savings
+    WHERE goal_name = p_goal_name
+    ORDER BY target_date DESC;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_budget_details_for_category(
+    p_category IN VARCHAR2,
+    p_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_cursor FOR
+    SELECT budget_id,
+           category,
+           amount,
+           start_date,
+           end_date,
+           status
+    FROM budgets
+    WHERE category = p_category
+    ORDER BY start_date DESC;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_budgets_for_month(
+    p_month IN NUMBER,
+    p_year IN NUMBER,
+    p_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_cursor FOR
+    SELECT budget_id,
+           category,
+           amount,
+           start_date,
+           end_date,
+           status
+    FROM budgets
+    WHERE EXTRACT(MONTH FROM start_date) = p_month
+      AND EXTRACT(YEAR FROM start_date) = p_year
+    ORDER BY start_date DESC;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_expenses_for_category(
+    p_category IN VARCHAR2,
+    p_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_cursor FOR
+    SELECT expense_id,
+           category,
+           amount,
+           expense_date,
+           note
+    FROM expenses
+    WHERE category = p_category
+    ORDER BY expense_date DESC;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_overused_budgets(p_cursor OUT SYS_REFCURSOR)
+AS
+BEGIN
+    OPEN p_cursor FOR
+    SELECT b.budget_id,
+           b.category,
+           b.amount AS budget_amount,
+           NVL(SUM(e.amount),0) AS actual_spent,
+           b.amount - NVL(SUM(e.amount),0) AS remaining_budget
+    FROM budgets b
+    LEFT JOIN expenses e
+        ON b.category = e.category
+        AND e.expense_date BETWEEN b.start_date AND b.end_date
+    GROUP BY b.budget_id, b.category, b.amount
+    HAVING (b.amount - NVL(SUM(e.amount),0)) < 0
+    ORDER BY remaining_budget ASC;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_completed_or_over_saved_savings(p_cursor OUT SYS_REFCURSOR)
+AS
+BEGIN
+    OPEN p_cursor FOR
+    SELECT saving_id,
+           goal_name,
+           target_amount,
+           current_amount,
+           target_date,
+           last_entered_date,
+           status
+    FROM savings
+    WHERE current_amount >= target_amount
+    ORDER BY current_amount DESC;
+END;
+/
+
