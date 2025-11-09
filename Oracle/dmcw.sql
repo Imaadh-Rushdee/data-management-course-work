@@ -298,3 +298,7 @@ END;
 --monthly expenses--
 --category expenses 
 --budgets vs expenses --
+
+--select cursor procedures--
+
+--
