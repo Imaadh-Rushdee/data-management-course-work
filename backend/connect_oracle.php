@@ -1,12 +1,13 @@
 <?php
+
 /**
  * connect_oracle.php
  * Test connection to Oracle database using OCI8
  */
 
 // Oracle credentials
-$username = 'System';           // Replace with your Oracle username
-$password = '123';    // Replace with your Oracle password
+$username = 'system';           // Replace with your Oracle username
+$password = 'Savishka4';    // Replace with your Oracle password
 $connection_string = 'localhost:1521/XE'; // Replace XE if your service name is different
 
 // Attempt to connect
@@ -21,4 +22,3 @@ echo "Connected to Oracle successfully!";
 
 // Close connection
 oci_close($conn);
-?>
