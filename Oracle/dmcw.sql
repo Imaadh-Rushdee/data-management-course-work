@@ -182,7 +182,7 @@ AS
  failedToUpdateException EXCEPTION;
  rowCount NUMBER;
 BEGIN
-    UPDATE savings SET goal_name = para_goal_name, target_amount = para_target_amount, current_amount = para_current_amount, last_entered_date = para_last_entered_date, status = 'PENDING' WHERE saving_id = savingsId;
+    UPDATE savings SET goal_name = para_goal_name, target_amount = para_target_amount, current_amount = para_current_amount, target_date last_entered_date = para_last_entered_date, status = 'PENDING' WHERE saving_id = savingsId;
     COMMIT;
     rowCount := SQL%ROWCOUNT;
     IF rowCount = 0 THEN
