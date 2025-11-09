@@ -182,7 +182,7 @@ AS
  failedToUpdateException EXCEPTION;
  rowCount NUMBER;
 BEGIN
-    UPDATE savings SET goal_name = para_goal_name, target_amount = para_target_amount, current_amount = para_current_amount, target_date last_entered_date = para_last_entered_date, status = 'PENDING' WHERE saving_id = savingsId;
+    UPDATE savings SET goal_name = para_goal_name, target_amount = para_target_amount, current_amount = para_current_amount, target_date = para_target_date, last_entered_date = para_last_entered_date, status = 'PENDING' WHERE saving_id = savingsId;
     COMMIT;
     rowCount := SQL%ROWCOUNT;
     IF rowCount = 0 THEN
@@ -298,12 +298,9 @@ END;
 --monthly expenses--
 --category expenses 
 --budgets vs expenses --
-<<<<<<< HEAD
 
 --select cursor procedures--
 
---
-=======
 --updates--
 --fuctions for calculate--
   
@@ -569,4 +566,9 @@ LEFT JOIN
     AND e.expense_date BETWEEN b.start_date AND b.end_date
 GROUP BY
     b.budget_id, b.category, b.start_date, b.end_date, b.amount;
->>>>>>> 7002a160b753f7a14306f6445c8e00ebfdd91815
+
+
+
+
+
+--sync for sqlite cursors--
