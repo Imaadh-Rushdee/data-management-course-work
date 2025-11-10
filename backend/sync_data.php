@@ -249,87 +249,74 @@ function insertSavingToSQLite($sqlite_conn, $goal_name, $target_amount, $current
 
 
 //sync from Sqlite to Oracle 
+echo "Starting sync process...\n";
+
+// --- Pending data from SQLite to Oracle ---
 $pendingExpenses = getPendingExpensesSqlite($sqlite_conn);
+echo "Pending Expenses in SQLite: " . count($pendingExpenses) . "\n";
 foreach ($pendingExpenses as $row) {
-    $success = syncExpenseToOracle(
-        $conn,
-        $row['category'],
-        $row['amount'],
-        $row['expense_date'],
-        $row['note']
-    );
-}
-$pendingBudgets = getPendingBudgetsSqlite($sqlite_conn);
-foreach ($pendingBudgets as $row) {
-    $success = syncBudgetToOracle(
-        $conn,
-        $row['category'],
-        $row['amount'],
-        $row['start_date'],
-        $row['end_date']
-    );
-}
-$pendingSavings = getPendingSavingsSqlite($sqlite_conn);
-foreach ($pendingSavings as $row) {
-    $success = syncSavingToOracle(
-        $conn,
-        $row['goal_name'],
-        $row['target_amount'],
-        $row['current_amount'],
-        $row['target_date'],
-        $row['last_entered_date']
-    );
+    $success = syncExpenseToOracle($conn, $row['category'], $row['amount'], $row['expense_date'], $row['note']);
+    echo $success ? "Expense synced to Oracle: {$row['category']}, {$row['amount']}\n" : "Failed to sync expense: {$row['category']}\n";
 }
 
+$pendingBudgets = getPendingBudgetsSqlite($sqlite_conn);
+echo "Pending Budgets in SQLite: " . count($pendingBudgets) . "\n";
+foreach ($pendingBudgets as $row) {
+    $success = syncBudgetToOracle($conn, $row['category'], $row['amount'], $row['start_date'], $row['end_date']);
+    echo $success ? "Budget synced to Oracle: {$row['category']}, {$row['amount']}\n" : "Failed to sync budget: {$row['category']}\n";
+}
+
+$pendingSavings = getPendingSavingsSqlite($sqlite_conn);
+echo "Pending Savings in SQLite: " . count($pendingSavings) . "\n";
+foreach ($pendingSavings as $row) {
+    $success = syncSavingToOracle($conn, $row['goal_name'], $row['target_amount'], $row['current_amount'], $row['target_date'], $row['last_entered_date']);
+    echo $success ? "Saving synced to Oracle: {$row['goal_name']}, {$row['target_amount']}\n" : "Failed to sync saving: {$row['goal_name']}\n";
+}
+
+// --- Deleted data from SQLite to Oracle ---
 $deletedExpenses = getDeletedExpensesFromSQLite($sqlite_conn);
+echo "Deleted Expenses in SQLite: " . count($deletedExpenses) . "\n";
 foreach ($deletedExpenses as $row) {
     syncExpenseDeleteToOracle($conn, $row);
+    echo "Deleted expense synced to Oracle: {$row['oracle_id']}\n";
 }
 
 $deletedBudgets = getDeletedBudgetsFromSQLite($sqlite_conn);
+echo "Deleted Budgets in SQLite: " . count($deletedBudgets) . "\n";
 foreach ($deletedBudgets as $row) {
     syncBudgetDeleteToOracle($conn, $row);
+    echo "Deleted budget synced to Oracle: {$row['oracle_id']}\n";
 }
 
 $deletedSavings = getDeletedSavingsFromSQLite($sqlite_conn);
+echo "Deleted Savings in SQLite: " . count($deletedSavings) . "\n";
 foreach ($deletedSavings as $row) {
     syncSavingDeleteToOracle($conn, $row);
+    echo "Deleted saving synced to Oracle: {$row['oracle_id']}\n";
 }
 
-//sync from oracle to sqlite 
-
+// --- Pending data from Oracle to SQLite ---
 $oracleExpenses = getPendingExpensesOracle($conn);
+echo "Pending Expenses in Oracle: " . count($oracleExpenses) . "\n";
 foreach ($oracleExpenses as $row) {
-    insertExpenseToSQLite(
-        $sqlite_conn,
-        $row['CATEGORY'],
-        $row['AMOUNT'],
-        $row['EXPENSE_DATE'],
-        $row['NOTE']
-    );
+    insertExpenseToSQLite($sqlite_conn, $row['CATEGORY'], $row['AMOUNT'], $row['EXPENSE_DATE'], $row['NOTE']);
+    echo "Expense inserted into SQLite: {$row['CATEGORY']}, {$row['AMOUNT']}\n";
 }
 
 $oracleBudgets = getPendingBudgetsOracle($conn);
+echo "Pending Budgets in Oracle: " . count($oracleBudgets) . "\n";
 foreach ($oracleBudgets as $row) {
-    insertBudgetToSQLite(
-        $sqlite_conn,
-        $row['CATEGORY'],
-        $row['AMOUNT'],
-        $row['START_DATE'],
-        $row['END_DATE']
-    );
+    insertBudgetToSQLite($sqlite_conn, $row['CATEGORY'], $row['AMOUNT'], $row['START_DATE'], $row['END_DATE']);
+    echo "Budget inserted into SQLite: {$row['CATEGORY']}, {$row['AMOUNT']}\n";
 }
 
 $oracleSavings = getPendingSavingsOracle($conn);
+echo "Pending Savings in Oracle: " . count($oracleSavings) . "\n";
 foreach ($oracleSavings as $row) {
-    insertSavingToSQLite(
-        $sqlite_conn,
-        $row['GOAL_NAME'],
-        $row['TARGET_AMOUNT'],
-        $row['CURRENT_AMOUNT'],
-        $row['TARGET_DATE'],
-        $row['LAST_ENTERED_DATE']
-    );
+    insertSavingToSQLite($sqlite_conn, $row['GOAL_NAME'], $row['TARGET_AMOUNT'], $row['CURRENT_AMOUNT'], $row['TARGET_DATE'], $row['LAST_ENTERED_DATE']);
+    echo "Saving inserted into SQLite: {$row['GOAL_NAME']}, {$row['TARGET_AMOUNT']}\n";
 }
+
+echo "Sync process completed.\n";
 
 ?>
