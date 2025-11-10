@@ -32,13 +32,13 @@ CREATE TABLE savings (
 
 --dummy data for confirmation --
 INSERT INTO expenses (category, amount, expense_date, note, sync_status)
-VALUES ('Food', 2500, TO_DATE('2025-10-28', 'YYYY-MM-DD'), 'Lunch', 'DONE');
+VALUES ('Food', 2500, TO_DATE('2025-10-28', 'YYYY-MM-DD'), 'Lunch', 'PENDING');
 
 INSERT INTO budgets (category, amount, start_date, end_date, status)
-VALUES ('Food', 10000, TO_DATE('2025-10-01', 'YYYY-MM-DD'), TO_DATE('2025-10-31', 'YYYY-MM-DD'), 'ACTIVE');
+VALUES ('Food', 10000, TO_DATE('2025-10-01', 'YYYY-MM-DD'), TO_DATE('2025-10-31', 'YYYY-MM-DD'), 'PENDING');
 
 INSERT INTO savings (goal_name, target_amount, current_amount, target_date, status)
-VALUES ('New Phone', 80000, 20000, TO_DATE('2025-12-31', 'YYYY-MM-DD'), 'ACTIVE');
+VALUES ('New Phone', 80000, 20000, TO_DATE('2025-12-31', 'YYYY-MM-DD'), 'PENDING');
 
 --------------------------------------------------------------------------------------------------------
 
@@ -216,63 +216,255 @@ END;
 
 --------------------------------------------------------
 --procedure to sync data from sqlite to oracle--
-CREATE OR REPLACE PROCEDURE sync_expenses(category IN VARCHAR2, amount NUMBER, expense_date DATE, note VARCHAR2)
+
+--================= sync_expenses =================
+CREATE OR REPLACE PROCEDURE sync_expenses(
+    p_id IN NUMBER,
+    p_category IN VARCHAR2,
+    p_amount IN NUMBER,
+    p_expense_date DATE,
+    p_note VARCHAR2
+)
 AS
- failedToInsertException EXCEPTION;
- rowCount NUMBER;
+    failedToInsertException EXCEPTION;
+    rowCount NUMBER;
 BEGIN
-    INSERT INTO expenses(category, amount, expense_date, note, sync_status) VALUES(category, amount, expense_date, note, 'SYNCED');
+    IF p_id IS NOT NULL THEN
+        UPDATE expenses
+        SET category = p_category,
+            amount = p_amount,
+            expense_date = p_expense_date,
+            note = p_note,
+            sync_status = 'SYNCED'
+        WHERE expense_id = p_id;
+    ELSE
+        INSERT INTO expenses(category, amount, expense_date, note, sync_status)
+        VALUES(p_category, p_amount, p_expense_date, p_note, 'SYNCED');
+    END IF;
+
     COMMIT;
+
     rowCount := SQL%ROWCOUNT;
     IF rowCount = 0 THEN
         RAISE failedToInsertException;
     END IF;
-    DBMS_OUTPUT.PUT_LINE('Record Inserted Successfully');
+
+    DBMS_OUTPUT.PUT_LINE('Expense record inserted/updated successfully');
+
 EXCEPTION
 WHEN failedToInsertException THEN
-    DBMS_OUTPUT.PUT_LINE('Failed to Insert Record Check data given...!');
+    DBMS_OUTPUT.PUT_LINE('Failed to insert/update expense. Check data!');
 END;
 /
 
-CREATE OR REPLACE PROCEDURE sync_budgets(category IN VARCHAR2, amount NUMBER, start_date DATE, end_date DATE)
+--================= sync_budgets =================
+CREATE OR REPLACE PROCEDURE sync_budgets(
+    p_id IN NUMBER,
+    p_category IN VARCHAR2,
+    p_amount IN NUMBER,
+    p_start_date DATE,
+    p_end_date DATE
+)
 AS
- failedToInsertException EXCEPTION;
- rowCount NUMBER;
+    failedToInsertException EXCEPTION;
+    rowCount NUMBER;
 BEGIN
-    INSERT INTO budgets(category, amount, start_date, end_date, status) VALUES(category, amount, start_date, end_date, 'SYNCED');
+    IF p_id IS NOT NULL THEN
+        UPDATE budgets
+        SET category = p_category,
+            amount = p_amount,
+            start_date = p_start_date,
+            end_date = p_end_date,
+            status = 'SYNCED'
+        WHERE budget_id = p_id;
+    ELSE
+        INSERT INTO budgets(category, amount, start_date, end_date, status)
+        VALUES(p_category, p_amount, p_start_date, p_end_date, 'SYNCED');
+    END IF;
+
     COMMIT;
+
     rowCount := SQL%ROWCOUNT;
     IF rowCount = 0 THEN
         RAISE failedToInsertException;
     END IF;
-    DBMS_OUTPUT.PUT_LINE('Record Inserted Successfully');
+
+    DBMS_OUTPUT.PUT_LINE('Budget record inserted/updated successfully');
+
 EXCEPTION
 WHEN failedToInsertException THEN
-    DBMS_OUTPUT.PUT_LINE('Failed to Insert Record Check data given...!');
+    DBMS_OUTPUT.PUT_LINE('Failed to insert/update budget. Check data!');
 END;
 /
 
-
-CREATE OR REPLACE PROCEDURE sync_savings(goal_name IN VARCHAR2, target_amount NUMBER, current_amount NUMBER, target_date DATE, last_entered_date DATE)
+--================= sync_savings =================
+CREATE OR REPLACE PROCEDURE sync_savings(
+    p_id IN NUMBER,
+    p_goal_name IN VARCHAR2,
+    p_target_amount IN NUMBER,
+    p_current_amount IN NUMBER,
+    p_target_date DATE,
+    p_last_entered_date DATE
+)
 AS
- failedToInsertException EXCEPTION;
- rowCount NUMBER;
+    failedToInsertException EXCEPTION;
+    rowCount NUMBER;
 BEGIN
-    INSERT INTO savings(goal_name, target_amount, current_amount,target_date, last_entered_date, status) VALUES(goal_name, target_amount, current_amount, target_date, last_entered_date, 'SYNCED');
+    IF p_id IS NOT NULL THEN
+        UPDATE savings
+        SET goal_name = p_goal_name,
+            target_amount = p_target_amount,
+            current_amount = p_current_amount,
+            target_date = p_target_date,
+            last_entered_date = p_last_entered_date,
+            status = 'SYNCED'
+        WHERE saving_id = p_id;
+    ELSE
+        INSERT INTO savings(goal_name, target_amount, current_amount, target_date, last_entered_date, status)
+        VALUES(p_goal_name, p_target_amount, p_current_amount, p_target_date, p_last_entered_date, 'SYNCED');
+    END IF;
+
     COMMIT;
+
     rowCount := SQL%ROWCOUNT;
     IF rowCount = 0 THEN
         RAISE failedToInsertException;
     END IF;
-    DBMS_OUTPUT.PUT_LINE('Record Inserted in savings Successfully');
+
+    DBMS_OUTPUT.PUT_LINE('Savings record inserted/updated successfully');
+
 EXCEPTION
 WHEN failedToInsertException THEN
-    DBMS_OUTPUT.PUT_LINE('Failed to Insert Record in savings Check data given...!');
+    DBMS_OUTPUT.PUT_LINE('Failed to insert/update savings. Check data!');
 END;
 /
+
+-- expenses delete
+CREATE OR REPLACE PROCEDURE sync_expenses_delete(
+    p_id IN NUMBER,
+    p_category IN VARCHAR2,
+    p_amount IN NUMBER,
+    p_expense_date DATE,
+    p_note VARCHAR2
+)
+AS
+BEGIN
+    IF p_id IS NOT NULL THEN
+        UPDATE expenses
+        SET category = p_category,
+            amount = p_amount,
+            expense_date = p_expense_date,
+            note = p_note,
+            sync_status = 'DELETED'
+        WHERE expense_id = p_id;
+    ELSE
+        INSERT INTO expenses(category, amount, expense_date, note, sync_status)
+        VALUES(p_category, p_amount, p_expense_date, p_note, 'DELETED');
+    END IF;
+    COMMIT;
+END;
+/
+
+-- budgets delete
+CREATE OR REPLACE PROCEDURE sync_budgets_delete(
+    p_id IN NUMBER,
+    p_category IN VARCHAR2,
+    p_amount IN NUMBER,
+    p_start_date DATE,
+    p_end_date DATE
+)
+AS
+BEGIN
+    IF p_id IS NOT NULL THEN
+        UPDATE budgets
+        SET category = p_category,
+            amount = p_amount,
+            start_date = p_start_date,
+            end_date = p_end_date,
+            status = 'DELETED'
+        WHERE budget_id = p_id;
+    ELSE
+        INSERT INTO budgets(category, amount, start_date, end_date, status)
+        VALUES(p_category, p_amount, p_start_date, p_end_date, 'DELETED');
+    END IF;
+    COMMIT;
+END;
+/
+
+-- savings delete
+CREATE OR REPLACE PROCEDURE sync_savings_delete(
+    p_id IN NUMBER,
+    p_goal_name IN VARCHAR2,
+    p_target_amount IN NUMBER,
+    p_current_amount IN NUMBER,
+    p_target_date DATE,
+    p_last_entered_date DATE
+)
+AS
+BEGIN
+    IF p_id IS NOT NULL THEN
+        UPDATE savings
+        SET goal_name = p_goal_name,
+            target_amount = p_target_amount,
+            current_amount = p_current_amount,
+            target_date = p_target_date,
+            last_entered_date = p_last_entered_date,
+            status = 'DELETED'
+        WHERE saving_id = p_id;
+    ELSE
+        INSERT INTO savings(goal_name, target_amount, current_amount, target_date, last_entered_date, status)
+        VALUES(p_goal_name, p_target_amount, p_current_amount, p_target_date, p_last_entered_date, 'DELETED');
+    END IF;
+    COMMIT;
+END;
+/
+
 
 ----------------------------------------------------------------------------------------
 --functions for calculations--
+CREATE OR REPLACE PROCEDURE get_pending_expenses(p_cursor OUT SYS_REFCURSOR)
+AS
+BEGIN
+    OPEN p_cursor FOR
+    SELECT expense_id AS id,
+           category,
+           amount,
+           expense_date,
+           note
+    FROM expenses
+    WHERE sync_status = 'PENDING';
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_pending_budgets(p_cursor OUT SYS_REFCURSOR)
+AS
+BEGIN
+    OPEN p_cursor FOR
+    SELECT budget_id AS id,
+           category,
+           amount,
+           start_date,
+           end_date
+    FROM budgets
+    WHERE status = 'PENDING';
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_pending_savings(p_cursor OUT SYS_REFCURSOR)
+AS
+BEGIN
+    OPEN p_cursor FOR
+    SELECT saving_id AS id,
+           goal_name,
+           target_amount,
+           current_amount,
+           target_date,
+           last_entered_date
+    FROM savings
+    WHERE status = 'PENDING';
+END;
+/
+
 
 --calculate total expense for a given month--
 --calculate total expense for a given category--
