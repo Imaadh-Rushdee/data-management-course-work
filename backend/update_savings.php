@@ -9,8 +9,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $target_amount = filter_var($_POST['target_amount'], FILTER_VALIDATE_FLOAT);
     $current_amount = filter_var($_POST['current_amount'], FILTER_VALIDATE_FLOAT);
     $target_date_str = htmlspecialchars($_POST['target_date']);
-    
-    // For last_entered_date, we can use today's date
+
+
     $last_entered_date_str = date('Y-m-d');
 
     if ($saving_id === false || !$goal_name || $target_amount === false || $current_amount === false || !$target_date_str) {
@@ -38,13 +38,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $success = oci_execute($stmt, OCI_COMMIT_ON_SUCCESS);
 
     if ($success) {
-        echo "<p style='color: green;'>✅ Saving Goal ID {$saving_id} updated successfully!</p>";
+        echo "<p style='color: green;'> Saving Goal ID {$saving_id} updated successfully!</p>";
     } else {
         $e = oci_error($stmt);
-        echo "<p style='color: red;'>❌ Error updating saving goal: " . htmlspecialchars($e['message']) . "</p>";
+        echo "<p style='color: red;'> Error updating saving goal: " . htmlspecialchars($e['message']) . "</p>";
     }
 
     oci_free_statement($stmt);
     oci_close($conn);
 }
-?>

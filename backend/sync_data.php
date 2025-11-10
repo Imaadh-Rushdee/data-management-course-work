@@ -3,7 +3,8 @@ include('connect_sqlite.php');
 include('connect_oracle.php');
 
 // ================== SQLite fetching functions ==================
-function getPendingExpensesSqlite($sqlite_conn) {
+function getPendingExpensesSqlite($sqlite_conn)
+{
     $data = [];
     $result = $sqlite_conn->query("SELECT id, oracle_id, category, amount, expense_date, note 
                                    FROM expenses WHERE sync_status = 'PENDING'");
@@ -13,7 +14,8 @@ function getPendingExpensesSqlite($sqlite_conn) {
     return $data;
 }
 
-function getPendingBudgetsSqlite($sqlite_conn) {
+function getPendingBudgetsSqlite($sqlite_conn)
+{
     $data = [];
     $result = $sqlite_conn->query("SELECT id, oracle_id, category, amount, start_date, end_date 
                                    FROM budgets WHERE status = 'PENDING'");
@@ -23,7 +25,8 @@ function getPendingBudgetsSqlite($sqlite_conn) {
     return $data;
 }
 
-function getPendingSavingsSqlite($sqlite_conn) {
+function getPendingSavingsSqlite($sqlite_conn)
+{
     $data = [];
     $result = $sqlite_conn->query("SELECT id, oracle_id, goal_name, target_amount, current_amount, target_date, last_entered_date 
                                    FROM savings WHERE status = 'PENDING'");
@@ -33,7 +36,8 @@ function getPendingSavingsSqlite($sqlite_conn) {
     return $data;
 }
 
-function getDeletedExpensesFromSQLite($sqlite_conn) {
+function getDeletedExpensesFromSQLite($sqlite_conn)
+{
     $data = [];
     $result = $sqlite_conn->query("SELECT id, oracle_id, category, amount, expense_date, note 
                                    FROM expenses WHERE sync_status = 'DELETED'");
@@ -43,7 +47,8 @@ function getDeletedExpensesFromSQLite($sqlite_conn) {
     return $data;
 }
 
-function getDeletedBudgetsFromSQLite($sqlite_conn) {
+function getDeletedBudgetsFromSQLite($sqlite_conn)
+{
     $data = [];
     $result = $sqlite_conn->query("SELECT id, oracle_id, category, amount, start_date, end_date 
                                    FROM budgets WHERE status = 'DELETED'");
@@ -53,7 +58,8 @@ function getDeletedBudgetsFromSQLite($sqlite_conn) {
     return $data;
 }
 
-function getDeletedSavingsFromSQLite($sqlite_conn) {
+function getDeletedSavingsFromSQLite($sqlite_conn)
+{
     $data = [];
     $result = $sqlite_conn->query("SELECT id, oracle_id, goal_name, target_amount, current_amount, target_date, last_entered_date 
                                    FROM savings WHERE status = 'DELETED'");
@@ -64,7 +70,8 @@ function getDeletedSavingsFromSQLite($sqlite_conn) {
 }
 
 // ================== Oracle syncing functions ==================
-function syncExpenseToOracle($conn, $category, $amount, $expense_date, $note) {
+function syncExpenseToOracle($conn, $category, $amount, $expense_date, $note)
+{
     $sql = "BEGIN sync_expenses(:p_id, :p_category, :p_amount, TO_DATE(:p_expense_date,'YYYY-MM-DD'), :p_note); END;";
     $stmt = oci_parse($conn, $sql);
     $id = null; // new expense
@@ -76,7 +83,8 @@ function syncExpenseToOracle($conn, $category, $amount, $expense_date, $note) {
     return oci_execute($stmt);
 }
 
-function syncBudgetToOracle($conn, $id, $category, $amount, $start_date, $end_date) {
+function syncBudgetToOracle($conn, $id, $category, $amount, $start_date, $end_date)
+{
     $sql = "BEGIN sync_budgets(:p_id, :p_category, :p_amount, TO_DATE(:p_start_date,'YYYY-MM-DD'), TO_DATE(:p_end_date,'YYYY-MM-DD')); END;";
     $stmt = oci_parse($conn, $sql);
     oci_bind_by_name($stmt, ":p_id", $id);
@@ -87,7 +95,8 @@ function syncBudgetToOracle($conn, $id, $category, $amount, $start_date, $end_da
     return oci_execute($stmt);
 }
 
-function syncSavingToOracle($conn, $goal_name, $target_amount, $current_amount, $target_date, $last_entered_date) {
+function syncSavingToOracle($conn, $goal_name, $target_amount, $current_amount, $target_date, $last_entered_date)
+{
     $sql = "BEGIN sync_savings(:goal_name, :target_amount, :current_amount, TO_DATE(:target_date,'YYYY-MM-DD'), TO_DATE(:last_entered_date,'YYYY-MM-DD')); END;";
     $stmt = oci_parse($conn, $sql);
     oci_bind_by_name($stmt, ":goal_name", $goal_name);
@@ -98,8 +107,9 @@ function syncSavingToOracle($conn, $goal_name, $target_amount, $current_amount, 
     return oci_execute($stmt);
 }
 
-// Deleted sync functions remain the same
-function syncExpenseDeleteToOracle($conn, $row) {
+
+function syncExpenseDeleteToOracle($conn, $row)
+{
     $sql = "BEGIN sync_expenses_delete(:oracle_id, :category, :amount, TO_DATE(:expense_date,'YYYY-MM-DD'), :note); END;";
     $stmt = oci_parse($conn, $sql);
     oci_bind_by_name($stmt, ":oracle_id", $row['oracle_id']);
@@ -110,7 +120,8 @@ function syncExpenseDeleteToOracle($conn, $row) {
     return oci_execute($stmt);
 }
 
-function syncBudgetDeleteToOracle($conn, $row) {
+function syncBudgetDeleteToOracle($conn, $row)
+{
     $sql = "BEGIN sync_budgets_delete(:p_id, :p_category, :p_amount, TO_DATE(:p_start_date,'YYYY-MM-DD'), TO_DATE(:p_end_date,'YYYY-MM-DD')); END;";
     $stmt = oci_parse($conn, $sql);
     oci_bind_by_name($stmt, ":p_id", $row['oracle_id']);
@@ -121,7 +132,8 @@ function syncBudgetDeleteToOracle($conn, $row) {
     return oci_execute($stmt);
 }
 
-function syncSavingDeleteToOracle($conn, $row) {
+function syncSavingDeleteToOracle($conn, $row)
+{
     $sql = "BEGIN sync_savings_delete(:oracle_id, :goal_name, :target_amount, :current_amount, TO_DATE(:target_date,'YYYY-MM-DD'), TO_DATE(:last_entered_date,'YYYY-MM-DD')); END;";
     $stmt = oci_parse($conn, $sql);
     oci_bind_by_name($stmt, ":oracle_id", $row['oracle_id']);
@@ -133,8 +145,8 @@ function syncSavingDeleteToOracle($conn, $row) {
     return oci_execute($stmt);
 }
 
-// ================== SQLite insert functions ==================
-function insertExpenseToSQLite($sqlite_conn, $category, $amount, $expense_date, $note) {
+function insertExpenseToSQLite($sqlite_conn, $category, $amount, $expense_date, $note)
+{
     $stmt = $sqlite_conn->prepare("INSERT INTO expenses (category, amount, expense_date, note, sync_status) VALUES (:category, :amount, :expense_date, :note, 'SYNCED')");
     $stmt->bindValue(':category', $category, SQLITE3_TEXT);
     $stmt->bindValue(':amount', $amount, SQLITE3_FLOAT);
@@ -143,7 +155,8 @@ function insertExpenseToSQLite($sqlite_conn, $category, $amount, $expense_date, 
     return $stmt->execute();
 }
 
-function insertBudgetToSQLite($sqlite_conn, $category, $amount, $start_date, $end_date) {
+function insertBudgetToSQLite($sqlite_conn, $category, $amount, $start_date, $end_date)
+{
     $stmt = $sqlite_conn->prepare("INSERT INTO budgets (category, amount, start_date, end_date, status) VALUES (:category, :amount, :start_date, :end_date, 'SYNCED')");
     $stmt->bindValue(':category', $category, SQLITE3_TEXT);
     $stmt->bindValue(':amount', $amount, SQLITE3_FLOAT);
@@ -152,7 +165,8 @@ function insertBudgetToSQLite($sqlite_conn, $category, $amount, $start_date, $en
     return $stmt->execute();
 }
 
-function insertSavingToSQLite($sqlite_conn, $goal_name, $target_amount, $current_amount, $target_date, $last_entered_date) {
+function insertSavingToSQLite($sqlite_conn, $goal_name, $target_amount, $current_amount, $target_date, $last_entered_date)
+{
     $stmt = $sqlite_conn->prepare("INSERT INTO savings (goal_name, target_amount, current_amount, target_date, last_entered_date, status) VALUES (:goal_name, :target_amount, :current_amount, :target_date, :last_entered_date, 'SYNCED')");
     $stmt->bindValue(':goal_name', $goal_name, SQLITE3_TEXT);
     $stmt->bindValue(':target_amount', $target_amount, SQLITE3_FLOAT);
@@ -162,7 +176,7 @@ function insertSavingToSQLite($sqlite_conn, $goal_name, $target_amount, $current
     return $stmt->execute();
 }
 
-// ================== Sync process ==================
+
 echo "Starting sync process...\n";
 
 // --- Pending data from SQLite to Oracle ---
@@ -185,7 +199,7 @@ foreach ($pendingSavings as $row) {
     echo $success ? "Saving synced to Oracle: {$row['goal_name']}\n" : "Failed to sync saving: {$row['goal_name']}\n";
 }
 
-// --- Deleted data from SQLite to Oracle ---
+
 $deletedExpenses = getDeletedExpensesFromSQLite($sqlite_conn);
 foreach ($deletedExpenses as $row) {
     syncExpenseDeleteToOracle($conn, $row);
@@ -202,4 +216,3 @@ foreach ($deletedSavings as $row) {
 }
 
 echo "Sync process completed.\n";
-?>
