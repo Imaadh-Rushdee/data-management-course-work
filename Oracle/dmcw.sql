@@ -423,6 +423,7 @@ END;
 ----------------------------------------------------------------------------------------
 --functions for calculations--
 -- get pending expenses and mark them as SYNCED
+-- 1️⃣ Get pending expenses and mark them as SYNCED
 CREATE OR REPLACE PROCEDURE get_pending_expenses(p_cursor OUT SYS_REFCURSOR)
 AS
 BEGIN
@@ -433,20 +434,18 @@ BEGIN
            expense_date,
            note
     FROM expenses
-    WHERE sync_status = 'PENDING'
-    FOR UPDATE;
-    
-    FOR rec IN (SELECT expense_id FROM expenses WHERE sync_status = 'PENDING') LOOP
-        UPDATE expenses
-        SET sync_status = 'SYNCED'
-        WHERE expense_id = rec.expense_id;
-    END LOOP;
+    WHERE sync_status = 'PENDING';
+
+    UPDATE expenses
+    SET sync_status = 'SYNCED'
+    WHERE sync_status = 'PENDING';
 
     COMMIT;
 END;
 /
+---------------------------------------------------------------
 
--- get pending budgets and mark them as SYNCED
+-- 2️⃣ Get pending budgets and mark them as SYNCED
 CREATE OR REPLACE PROCEDURE get_pending_budgets(p_cursor OUT SYS_REFCURSOR)
 AS
 BEGIN
@@ -457,20 +456,18 @@ BEGIN
            start_date,
            end_date
     FROM budgets
-    WHERE status = 'PENDING'
-    FOR UPDATE;
+    WHERE status = 'PENDING';
 
-    FOR rec IN (SELECT budget_id FROM budgets WHERE status = 'PENDING') LOOP
-        UPDATE budgets
-        SET status = 'SYNCED'
-        WHERE budget_id = rec.budget_id;
-    END LOOP;
+    UPDATE budgets
+    SET status = 'SYNCED'
+    WHERE status = 'PENDING';
 
     COMMIT;
 END;
 /
+---------------------------------------------------------------
 
--- get pending savings and mark them as SYNCED
+-- 3️⃣ Get pending savings and mark them as SYNCED
 CREATE OR REPLACE PROCEDURE get_pending_savings(p_cursor OUT SYS_REFCURSOR)
 AS
 BEGIN
@@ -482,14 +479,11 @@ BEGIN
            target_date,
            last_entered_date
     FROM savings
-    WHERE status = 'PENDING'
-    FOR UPDATE;
+    WHERE status = 'PENDING';
 
-    FOR rec IN (SELECT saving_id FROM savings WHERE status = 'PENDING') LOOP
-        UPDATE savings
-        SET status = 'SYNCED'
-        WHERE saving_id = rec.saving_id;
-    END LOOP;
+    UPDATE savings
+    SET status = 'SYNCED'
+    WHERE status = 'PENDING';
 
     COMMIT;
 END;

@@ -1,4 +1,5 @@
 <?php
+try{
 include('connect_sqlite.php');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -23,5 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         echo "Failed to update budget.";
     }
+}
+return true;
+} catch (PDOException $e) {
+    return false;
 }
 ?>
