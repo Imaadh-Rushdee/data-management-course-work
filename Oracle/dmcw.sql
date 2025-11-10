@@ -946,7 +946,7 @@ BEGIN
 END;
 /
 
---backup logi
+--backup logic
 
 -- Logging table for expenses
 CREATE TABLE expenses_log (

@@ -46,7 +46,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             } else {
                 echo "<p style='color: red;'>❌ Error adding expense: " . htmlspecialchars($e['message']) . "</p>";
             }
-        }
+        } 
 
         // 6. Clean up
         oci_free_statement($stmt);
