@@ -1,5 +1,6 @@
 <?php
 include('connect_sqlite.php');
+include('../Frontend/navbar.php');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $goal_name = $_POST['goal_name'];

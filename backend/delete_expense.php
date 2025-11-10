@@ -1,6 +1,7 @@
 <?php
 // Include the connection file
 include 'connect_oracle.php';
+include('../Frontend/navbar.php');
 
 // Set the name of your Oracle stored procedure for deletion
 $procedure_name = 'delete_expense';

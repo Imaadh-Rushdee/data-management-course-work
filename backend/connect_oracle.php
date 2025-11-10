@@ -12,7 +12,6 @@ if (!$conn) {
     die("Oracle Connection Failed: " . $e['message']);
 }
 
-echo "Connected to Oracle successfully!";
 
 oci_close($conn);
 return true;

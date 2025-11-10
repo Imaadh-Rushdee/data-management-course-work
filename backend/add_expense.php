@@ -1,6 +1,7 @@
 <?php
 // Include the connection file
 include 'connect_oracle.php';
+include('../Frontend/navbar.php');
 
 // Check if the form has been submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {

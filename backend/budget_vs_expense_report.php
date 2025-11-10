@@ -1,5 +1,7 @@
 <?php
 include('connect_oracle.php');
+include('../Frontend/navbar.php');
+
 
 $sql = "SELECT * FROM mv_budgets_vs_expenses ORDER BY remaining_budget DESC";
 $stmt = oci_parse($conn, $sql);

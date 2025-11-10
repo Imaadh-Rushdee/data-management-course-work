@@ -1,5 +1,6 @@
 <?php
 include('connect_oracle.php');
+include('../Frontend/navbar.php');
 
 $sql = "SELECT * FROM monthly_expense_view ORDER BY expense_year DESC, expense_month_num DESC";
 $stmt = oci_parse($conn, $sql);

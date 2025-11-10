@@ -1,5 +1,6 @@
 <?php
 include('connect_oracle.php');
+include('../Frontend/navbar.php');
 
 $sql = "SELECT * FROM savings_progress_view ORDER BY progress_percent DESC";
 $stmt = oci_parse($conn, $sql);

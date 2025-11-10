@@ -1,6 +1,7 @@
 <?php
 // Include the connection file
 include 'connect_oracle.php';
+include('../Frontend/navbar.php');
 
 // Check if the form has been submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -21,7 +22,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Set the name of your Oracle stored procedure
     // NOTE: Replace 'add_saving' with the actual procedure name if it's different.
-    $procedure_name = 'add_saving';
+    $procedure_name = 'add_savings';
 
     try {
         // 2. Prepare the PL/SQL block to call the procedure

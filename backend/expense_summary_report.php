@@ -1,5 +1,6 @@
 <?php
 include('connect_oracle.php');
+include('../Frontend/navbar.php');
 
 $sql = "SELECT * FROM expense_summary_view ORDER BY total_spent DESC";
 $stmt = oci_parse($conn, $sql);

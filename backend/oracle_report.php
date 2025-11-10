@@ -31,57 +31,57 @@ function fetchCursor($conn, $procName, $params = []) {
 // ======================= All 10 "get" functions =======================
 
 // 1. Get all expenses
-function getAllExpenses($conn){
+function getAllExpensesOracle($conn){
     return fetchCursor($conn, "get_all_expenses");
 }
 
 // 2. Get all budgets
-function getAllBudgets($conn){
+function getAllBudgetsOracle($conn){
     return fetchCursor($conn, "get_all_budgets");
 }
 
 // 3. Get all savings
-function getAllSavings($conn){
+function getAllSavingsOracle($conn){
     return fetchCursor($conn, "get_all_savings");
 }
 
 // 4. Get pending expenses
-function getPendingExpenses($conn){
+function getPendingExpensesOracle($conn){
     return fetchCursor($conn, "get_pending_expenses");
 }
 
 // 5. Get pending budgets
-function getPendingBudgets($conn){
+function getPendingBudgetsOracle($conn){
     return fetchCursor($conn, "get_pending_budgets");
 }
 
 // 6. Get pending savings
-function getPendingSavings($conn){
+function getPendingSavingsOracle($conn){
     return fetchCursor($conn, "get_pending_savings");
 }
 
 // 7. Get expense for a month
-function getExpenseForMonth($conn, $month, $year){
+function getExpenseForMonthOracle($conn, $month, $year){
     return fetchCursor($conn, "get_expense_for_month", ['p_month'=>$month, 'p_year'=>$year]);
 }
 
 // 8. Get expense for a category
-function getExpenseForCategory($conn, $category){
+function getExpenseForCategoryOracle($conn, $category){
     return fetchCursor($conn, "get_expense_for_category", ['p_category'=>$category]);
 }
 
 // 9. Get budget details for a category
-function getBudgetForCategory($conn, $category){
+function getBudgetForCategoryOracle($conn, $category){
     return fetchCursor($conn, "get_budget_for_category", ['p_category'=>$category]);
 }
 
 // 10. Get overused budgets
-function getOverusedBudgets($conn){
+function getOverusedBudgetsOracle($conn){
     return fetchCursor($conn, "get_overused_budgets");
 }
 
 // Optional: function to get completed/over-saved savings
-function getCompletedSavings($conn){
+function getCompletedSavingsOracle($conn){
     return fetchCursor($conn, "get_completed_savings");
 }
 
