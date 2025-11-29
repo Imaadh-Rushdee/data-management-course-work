@@ -1060,4 +1060,4 @@ ADD CONSTRAINT uq_budget_category UNIQUE (category);
 
 
 
-
+select * from expenses;
